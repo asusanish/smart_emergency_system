@@ -82,7 +82,9 @@ if ($ambulance->status != 'Available') {
 
         'description' => $request->description,
 
-        'status' => 'Pending'
+        'status' => 'Pending',
+
+        'assigned_at' => now(),
 
     ]);
 
@@ -144,7 +146,8 @@ public function publicEmergency(Request $request)
         'latitude' => $request->latitude,
         'longitude' => $request->longitude,
         'description' => $request->description,
-        'status' => 'Pending'   
+        'status' => 'Pending'   ,
+        'assigned_at' => now(),
     ]);
 
     

@@ -9,15 +9,16 @@ class EmergencyRequest extends Model
     protected $fillable = [
 
         'patient_id',
-    'patient_name',
-    'patient_phone',
-    'ambulance_id',
-    'emergency_type',
-    'severity',
-    'latitude',
-    'longitude',
-    'description',
-    'status'
+        'patient_name',
+        'patient_phone',
+        'ambulance_id',
+        'emergency_type',
+        'severity',
+        'latitude',
+        'longitude',
+        'description',
+        'status',
+        'assigned_at',
 
     ];
 
