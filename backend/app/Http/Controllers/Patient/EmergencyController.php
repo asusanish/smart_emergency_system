@@ -129,12 +129,7 @@ public function publicEmergency(Request $request)
     ]);
 
     // Find available ambulance
-   $ambulance = Ambulance::findOrFail($request->ambulance_id);
-   if ($ambulance->status !== 'Available') {
-    return response()->json([
-        'message' => 'Selected ambulance is no longer available.'
-    ], 400);
-}
+  
 
 
 
@@ -151,6 +146,8 @@ public function publicEmergency(Request $request)
         'description' => $request->description,
         'status' => 'Pending'   
     ]);
+
+    
     EmergencyLog::create([
     'emergency_request_id'=> $emergency->id,
     'status'=>'Emergency Requested'
@@ -191,7 +188,10 @@ public function currentEmergency()
 {
     $emergency = EmergencyRequest::with(['ambulance.driver'])
         ->where('patient_id', Auth::id())
-        ->where('status','!=','Completed')
+        ->whereNotIn('status', [
+    'Completed',
+    'Cancelled'
+])
         ->latest()
         ->first();
 
@@ -205,17 +205,16 @@ public function currentEmergency()
     }
 
 
-    $lastLog = EmergencyLog::where(
+    $logs = EmergencyLog::where(
     'emergency_request_id',
     $emergency->id
-    )
-
-    ->latest()
-    ->first();
+)
+    ->orderBy('created_at')
+    ->get();
 
     return response()->json([
         'emergency' => $emergency,
-    'message' => $lastMessage?->status
-    ]);
+        'logs' => $logs
+    ]); 
     }
 }

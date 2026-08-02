@@ -3,8 +3,10 @@
 namespace App\Services;
 
 use App\Models\Ambulance;
-use App\Models\EmergencyLog;
+// use App\Models\EmergencyLog;
 use App\Models\EmergencyRejection;
+use App\Models\EmergencyRequest;
+use Illuminate\Support\Facades\DB;
 
 class DispatchService
 {
@@ -26,85 +28,68 @@ class DispatchService
 
         return $earthRadius * $c;
     }
-    public function assignNearestAmbulance($emergency)
+    public function assignNearestAmbulance(EmergencyRequest $emergency)
     {
-        // STEP 1: Get rejected ambulances
-        $rejectedIds = EmergencyRejection::where(
-            'emergency_request_id',
-            $emergency->id
-        )->pluck('ambulance_id');
+    // Ambulances that have already rejected this emergency
+    $rejectedIds = EmergencyRejection::where(
+        'emergency_request_id',
+        $emergency->id
+    )->pluck('ambulance_id');
 
-        // STEP 2: Find available ambulances
-        $ambulances = Ambulance::where('status', 'Available')
-            ->whereNotIn('id', $rejectedIds)
-            ->whereNotNull('latitude')
-            ->whereNotNull('longitude')
-            ->with('driver')
-            ->get();
+    // Available ambulances
+    $ambulances = Ambulance::with('driver')
+        ->whereHas('driver')
+        ->where('status', 'Available')
+        ->whereNotIn('id', $rejectedIds)
+        ->whereNotNull('latitude')
+        ->whereNotNull('longitude')
+        ->get();
 
-        // STEP 3: No ambulance available
-        if ($ambulances->isEmpty()) {
-            return null;
+    if ($ambulances->isEmpty()) {
+        return null;
+    }
+
+    $nearestAmbulance = null;
+    $nearestDistance = PHP_FLOAT_MAX;
+
+    foreach ($ambulances as $ambulance) {
+
+        $distance = $this->calculateDistance(
+            $emergency->latitude,
+            $emergency->longitude,
+            $ambulance->latitude,
+            $ambulance->longitude
+        );
+
+        if ($distance < $nearestDistance) {
+            $nearestDistance = $distance;
+            $nearestAmbulance = $ambulance;
         }
+    }
 
-        //step 4
-        $ambulancesWithDistance = [];
+    if (!$nearestAmbulance) {
+        return null;
+    }
 
-foreach ($ambulances as $ambulance) {
+    \Log::info([
+        'DispatchService Selected' => $nearestAmbulance->vehicle_number,
+        'Distance' => $nearestDistance,
+    ]);
 
-    $distance = $this->calculateDistance(
+    // Reserve ambulance
+   DB::transaction(function () use ($nearestAmbulance, $emergency) {
 
-        $emergency->latitude,
-        $emergency->longitude,
+    $nearestAmbulance->update([
+        'status' => 'Busy'
+    ]);
 
-        $ambulance->latitude,
-        $ambulance->longitude
+    $emergency->update([
+        'ambulance_id' => $nearestAmbulance->id,
+        'assigned_at' => now(),
+    ]);
 
-    );
-
-    $ambulancesWithDistance[] = [
-
-        'ambulance' => $ambulance,
-
-        'distance' => $distance
-
-    ];
-
-}
-
-$nearest = collect($ambulancesWithDistance)
-    ->sortBy('distance')
-    ->first();
-
-if (!$nearest) {
-    return null;
-}
-
-$nearestAmbulance = $nearest['ambulance'];
-
-$nearestAmbulance = $nearest['ambulance'];
-
-\Log::info([
-    'DispatchService Selected' => $nearestAmbulance->vehicle_number,
-    'Distance' => $nearest['distance'],
-]);
-
-$nearestAmbulance->update([
-
-    'status' => 'Busy'
-
-]);
-
-$emergency->update([
-
-    'ambulance_id' => $nearestAmbulance->id,
-
-    // 'status' => 'Pending',
-
-    'assigned_at'=>now()
-
-]);
-
-return $nearestAmbulance;
+    });
+    $emergency->refresh();
+    return $nearestAmbulance;
     }
 }

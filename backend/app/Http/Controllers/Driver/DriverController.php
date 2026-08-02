@@ -55,7 +55,6 @@
 
         if ($request->status == "Rejected")
 {
-    // Current ambulance
     $currentAmbulance = Ambulance::find($emergency->ambulance_id);
 
     if (!$currentAmbulance) {
@@ -64,20 +63,28 @@
         ], 404);
     }
 
-    // Make current ambulance available
+    // Free rejected ambulance
     $currentAmbulance->update([
         'status' => 'Available'
     ]);
 
-    // Remember that this ambulance rejected this emergency
+    // Save rejection
     EmergencyRejection::create([
         'emergency_request_id' => $emergency->id,
         'ambulance_id' => $currentAmbulance->id,
     ]);
-    $emergency->update([
-    'status' => 'Reassigning'
+
+    // Timeline
+    EmergencyLog::create([
+        'emergency_request_id' => $emergency->id,
+        'status' => 'Driver '.$currentAmbulance->driver->name.' rejected the request.'
     ]);
-    // Dispatch another ambulance
+
+    EmergencyLog::create([
+        'emergency_request_id' => $emergency->id,
+        'status' => 'Searching for another ambulance...'
+    ]);
+
     $dispatchService = new DispatchService();
 
     $nearestAmbulance = $dispatchService->assignNearestAmbulance($emergency);
@@ -90,25 +97,13 @@
 
         EmergencyLog::create([
             'emergency_request_id' => $emergency->id,
-            'status' => 'No ambulance available after rejection.'
+            'status' => 'No ambulance available.'
         ]);
 
         return response()->json([
-            'message' => 'No ambulance available for reassignment.'
+            'message' => 'No ambulance available.'
         ], 400);
     }
-
-    $emergency->refresh();
-
-    EmergencyLog::create([
-        'emergency_request_id' => $emergency->id,
-        'status' => 'Driver '.$currentAmbulance->driver->name.' rejected the request.'
-    ]);
-
-    EmergencyLog::create([
-        'emergency_request_id' => $emergency->id,
-        'status' => 'Searching for another ambulance...'
-    ]);
 
     EmergencyLog::create([
         'emergency_request_id' => $emergency->id,
@@ -116,14 +111,9 @@
                     ' ('.$nearestAmbulance->vehicle_number.')'
     ]);
 
-    $emergency->update([
-    'status' => 'Pending'
-    ]);
-
     return response()->json([
         'message' => 'Emergency reassigned successfully.',
-        'ambulance' => $nearestAmbulance,
-        'emergency' => $emergency
+        'emergency' => $emergency->fresh(['ambulance.driver'])
     ]);
 }
 

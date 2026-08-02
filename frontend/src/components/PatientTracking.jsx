@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import api from "../api/axios";
 import DriverMap from "./DriverMap";
 import Notification from "./Notification";
@@ -13,7 +13,20 @@ export default function PatientTracking() {
 
   const [notification, setNotification] = useState("");
 
+  
+  // const [statusMessage, setStatusMessage] = useState("");
+  
+  const [logs, setLogs] = useState([]);
+  
   const [lastLog, setLastLog] = useState("");
+  
+  const bottomRef = useRef(null);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({
+      behavior: "smooth",
+    });
+  }, [logs]);
 
   const calculateDistance = (lat1, lon1, lat2, lon2) => {
     const R = 6371;
@@ -51,6 +64,11 @@ export default function PatientTracking() {
 
       setEmergency(response.data.emergency);
       setLastLog(response.data.last_log);
+      // setStatusMessage(response.data.message);
+      setLogs(response.data.logs);
+
+      console.log(response.data);
+      console.log(response.data.message);
 
       //   console.log("Ambulance:", data.ambulance);
       //   console.log("Patient:", {
@@ -122,6 +140,42 @@ export default function PatientTracking() {
     );
   }
 
+  const getStatusColor = (status) => {
+    if (status.includes("Accepted")) return "bg-green-100 text-green-700";
+
+    if (status.includes("Completed")) return "bg-green-100 text-green-700";
+
+    if (status.includes("rejected")) return "bg-red-100 text-red-700";
+
+    if (status.includes("Searching")) return "bg-yellow-100 text-yellow-700";
+
+    if (status.includes("Assigned")) return "bg-blue-100 text-blue-700";
+
+    return "bg-gray-100 text-gray-700";
+  };
+
+  const getStatusIcon = (status) => {
+    if (status.includes("Emergency Requested")) return "🚨";
+
+    if (status.includes("Assigned")) return "🚑";
+
+    if (status.includes("Searching")) return "🔍";
+
+    if (status.includes("Accepted")) return "✅";
+
+    if (status.includes("On The Way")) return "🚗";
+
+    if (status.includes("Completed")) return "🏥";
+
+    if (status.includes("rejected")) return "❌";
+
+    return "📍";
+  };
+
+  
+
+  
+
   return (
     <>
       <Notification message={notification} />
@@ -138,6 +192,42 @@ export default function PatientTracking() {
             longitude: Number(emergency.ambulance.longitude),
           }}
         />
+        <Card className="mt-6">
+          <h2 className="text-xl font-bold mb-5">📋 Emergency Activity</h2>
+
+          <div className="space-y-4">
+            {logs.map((log) => (
+              <div key={log.id} className="flex items-start gap-4">
+                <div className="flex flex-col items-center">
+                  <div className="w-4 h-4 rounded-full bg-red-600"></div>
+
+                  <div className="w-0.5 flex-1 bg-gray-300"></div>
+                </div>
+
+                <div className="flex-1 pb-5">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl">{getStatusIcon(log.status)}</span>
+
+                    <span
+                      className={`px-3 py-1 rounded-full text-sm font-semibold ${getStatusColor(log.status)}`}
+                    >
+                      {log.status}
+                    </span>
+                  </div>
+
+                  <p className="text-sm text-gray-500 mt-1">
+                    {new Date(log.created_at).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </p>
+
+                  <div ref={bottomRef}></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
         <p className="mt-4 font-semibold">Status: {emergency.status}</p>
         {emergency.status === "Pending" && (
           <div className="bg-yellow-50 border border-yellow-300 rounded-xl p-5 mt-5">
