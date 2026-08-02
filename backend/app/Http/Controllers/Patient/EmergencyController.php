@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\EmergencyLog;
 
 
+
+
 class EmergencyController extends Controller
 {
 
@@ -31,8 +33,8 @@ class EmergencyController extends Controller
         // Prevent duplicate emergency
 
         $existing = EmergencyRequest::where('patient_id', Auth::id())
-    ->whereIn('status', EmergencyRequest::ACTIVE_STATUSES)
-    ->first();
+            ->whereIn('status', EmergencyRequest::ACTIVE_STATUSES)
+            ->first();
 
 
         if ($existing) {
@@ -120,21 +122,43 @@ class EmergencyController extends Controller
     public function publicEmergency(Request $request)
     {
         $request->validate([
-            'name' => 'required',
-            'phone' => 'required',
-            'ambulance_id' => 'required|exists:ambulances,id',
-            'emergency_type' => 'required',
-            'latitude' => 'required',
-            'longitude' => 'required'
+            'name' => 'required|string',
+            'phone' => 'required|string',
+            'emergency_type' => 'required|string',
+            'latitude' => 'required|numeric',
+            'longitude' => 'required|numeric',
+            'description' => 'nullable|string',
         ]);
 
-        // Find available ambulance
-        $ambulance = Ambulance::findOrFail($request->ambulance_id);
 
-        if ($ambulance->status !== 'Available') {
+
+        // Find available ambulance
+        // Find nearest available ambulance
+
+        $ambulance = Ambulance::where('status', 'Available')
+            ->selectRaw(
+                "*, (
+            6371 * acos(
+                cos(radians(?))
+                * cos(radians(latitude))
+                * cos(radians(longitude) - radians(?))
+                + sin(radians(?))
+                * sin(radians(latitude))
+            )
+        ) AS distance",
+                [
+                    $request->latitude,
+                    $request->longitude,
+                    $request->latitude
+                ]
+            )
+            ->orderBy('distance')
+            ->first();
+
+        if (!$ambulance) {
             return response()->json([
-                'message' => 'Selected ambulance is no longer available.'
-            ], 400);
+                'message' => 'No ambulance available'
+            ], 404);
         }
 
 
@@ -288,6 +312,17 @@ class EmergencyController extends Controller
 
         return response()->json([
             'message' => 'Emergency cancelled successfully'
+        ]);
+    }
+
+    public function history()
+    {
+        $history = EmergencyRequest::where('patient_id', Auth::id())
+            ->latest()
+            ->get();
+
+        return response()->json([
+            'history' => $history,
         ]);
     }
 }

@@ -16,8 +16,9 @@ return new class extends Migration
     $table->id();
 
     $table->foreignId('patient_id')
-          ->constrained('users')
-          ->cascadeOnDelete();
+      ->nullable()
+      ->constrained('users')
+      ->nullOnDelete();
 
     $table->foreignId('ambulance_id')
           ->nullable()

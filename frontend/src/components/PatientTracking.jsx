@@ -197,7 +197,7 @@ export default function PatientTracking() {
     return "bg-gray-400";
   };
 
-  const getTimelineIcon  = (status) => {
+  const getStatusIcon = (status) => {
     if (status.includes("Emergency Requested")) return "🚨";
 
     if (status.includes("Assigned")) return "🚑";
@@ -214,6 +214,31 @@ export default function PatientTracking() {
 
     return "📍";
   };
+
+  const getTimelineIcon = (status) => {
+  switch (status) {
+    case "Pending":
+      return "🟡";
+
+    case "Assigned":
+      return "🚑";
+
+    case "Accepted":
+      return "✅";
+
+    case "Arrived":
+      return "📍";
+
+    case "Completed":
+      return "🏁";
+
+    case "Cancelled":
+      return "❌";
+
+    default:
+      return "⚪";
+  }
+};
 
   return (
     <>
@@ -271,8 +296,8 @@ export default function PatientTracking() {
             ))}
           </div>
         </Card>
-        <p className="mt-4 font-semibold">Status: {emergency.status}</p>
-        {emergency.status === "Pending" && (
+        
+        {remainingSeconds > 0 && (
           <div className="bg-yellow-50 border border-yellow-300 rounded-xl p-5 mt-5">
             <h2 className="font-bold text-yellow-700">
               Waiting for driver confirmation...

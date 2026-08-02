@@ -15,6 +15,9 @@ import AmbulanceSelection from "../components/AmbulanceSelection";
 
 import PatientTracking from "../components/PatientTracking";
 import EmergencyMap from "../components/EmergencyMap";
+import UserProfile from "../components/UserProfile";
+import PatientHistory from "../components/PatientHistory";
+
 
 function PatientHome() {
   const [type, setType] = useState("Accident");
@@ -165,6 +168,7 @@ function PatientHome() {
         subtitle="Request ambulance support when you need it most"
       />
 
+      
       <Card className="bg-gradient-to-r from-red-500 to-red-600 text-white mb-8">
         <div className="text-center">
           <motion.button
@@ -235,14 +239,14 @@ function PatientHome() {
           </Button>
         )}
         {showAmbulances && (
-        <AmbulanceSelection 
-        location={location}
-          onSelect={(ambulance) => {
-            setSelectedAmbulance(ambulance);
-            setShowAmbulances(false);
-          }}
-        />
-      )}
+          <AmbulanceSelection
+            location={location}
+            onSelect={(ambulance) => {
+              setSelectedAmbulance(ambulance);
+              setShowAmbulances(false);
+            }}
+          />
+        )}
 
         {location && (
           <div className="grid md:grid-cols-2 gap-4 mt-6">
@@ -276,7 +280,7 @@ function PatientHome() {
           onChange={(e) => setDescription(e.target.value)}
         />
       </Card>
-      
+
       {selectedAmbulance && (
         <Card className="mt-6">
           <h2 className="text-xl font-bold mb-4">✅ Selected Ambulance</h2>

@@ -11,6 +11,7 @@ use App\Models\EmergencyLog;
 use App\Services\DispatchService;
 use App\Models\EmergencyRejection;
 
+
 class DriverController extends Controller
 {
 
@@ -243,4 +244,44 @@ class DriverController extends Controller
             'message' => 'Location updated successfully'
         ]);
     }
+
+
+    public function history()
+    {
+        $driver = Auth::user();
+
+        $history = EmergencyRequest::whereHas('ambulance', function ($query) use ($driver) {
+
+            $query->where('driver_id', $driver->id);
+        })
+            ->with([
+                'patient',
+                'ambulance'
+            ])
+            ->whereIn('status', [
+                'Completed',
+                'Cancelled'
+            ])
+            ->latest()
+            ->get();
+
+
+        return response()->json([
+            "history" => $history
+        ]);
+    }
+
+    public function profile()
+{
+    $driver = Auth::user();
+
+
+    $driverProfile = \App\Models\User::with('ambulance')
+        ->find($driver->id);
+
+
+    return response()->json([
+        "profile" => $driverProfile
+    ]);
+}
 }

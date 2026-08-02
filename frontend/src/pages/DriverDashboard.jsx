@@ -1,16 +1,18 @@
 import { useEffect, useState } from "react";
-import api from "../api/axios";
+
 import DashboardLayout from "../layouts/DashboardLayout";
 import Card from "../components/ui/Card";
-import Badge from "../components/ui/Badge";
 import PageHeader from "../components/ui/PageHeader";
 import DriverMap from "../components/DriverMap";
 import DriverStatusCard from "../components/DriverStatusCard";
-import Button from "../components/ui/Button";
 import EmergencyDetails from "../components/EmergencyDetails";
 import EmergencyList from "../components/EmergencyList";
 import useDriverTracking from "../hooks/useDriverTracking";
 import Countdown from "../components/Countdown";
+import { Link } from "react-router-dom";
+import Button from "../components/ui/Button";
+import DriverHistory from "../components/DriverHistory";
+import DriverProfile from "../components/DriverProfile";
 
 import {
   MapPin,
@@ -44,9 +46,15 @@ function DriverDashboard() {
         subtitle="Manage and respond to emergency requests"
       />
 
+      <Link to="/driver/history">
+        <Button>📜 History</Button>
+      </Link>
+
       {/* Driver Status */}
 
       <DriverStatusCard demoMode={demoMode} setDemoMode={setDemoMode} />
+      
+      
 
       {emergencies.length === 0 ? (
         <Card>

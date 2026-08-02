@@ -11,6 +11,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
+
 #[Fillable([
     'name',
     'email',
@@ -39,6 +40,12 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+    protected $fillable = [
+    'name',
+    'email',
+    'phone',
+    'password',
+];
     public function ambulance()
     {
         return $this->hasOne(Ambulance::class, 'driver_id');

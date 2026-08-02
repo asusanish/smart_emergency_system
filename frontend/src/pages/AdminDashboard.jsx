@@ -116,6 +116,20 @@ function AdminDashboard() {
     }
   };
 
+  const openEmergency = async (emergency) => {
+    try {
+      const response = await api.get(`/admin/emergencies/${emergency.id}`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+
+      setSelectedEmergency(response.data.emergency);
+    } catch (error) {
+      console.log(error.response?.data || error);
+    }
+  };
+
   return (
     <DashboardLayout title="Admin Dashboard">
       <PageHeader subtitle="Monitor ambulances, emergencies and system activity" />
@@ -183,6 +197,19 @@ function AdminDashboard() {
       )}
 
       <h2 className="text-2xl font-bold mt-10 mb-5">🚨 Live Emergencies</h2>
+      {/* <button
+        onClick={() => setSoundEnabled(!soundEnabled)}
+
+        className="
+text-sm
+bg-gray-100
+px-3
+py-2
+rounded-lg
+"
+      >
+        {soundEnabled ? "🔊 Sound" : "🔇 Muted"}
+      </button> */}
 
       {data?.live_emergencies?.length === 0 ? (
         <Card className="text-center py-8">
@@ -243,8 +270,8 @@ function AdminDashboard() {
           </tbody>
         </table>
       )}
-      <AdminAnalytics />    
-      <LiveEmergency/>
+      <AdminAnalytics />
+      <LiveEmergency onViewEmergency={openEmergency} />
       <AmbulanceManagement />
       <DriverManagement />
       <UserManagement />
