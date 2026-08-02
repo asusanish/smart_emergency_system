@@ -2,6 +2,9 @@
 
 namespace App\Models;
 
+use App\Models\User;
+use App\Models\Ambulance;
+use App\Models\EmergencyLog;
 use Illuminate\Database\Eloquent\Model;
 
 class EmergencyRequest extends Model
@@ -22,6 +25,14 @@ class EmergencyRequest extends Model
 
     ];
 
+    public const ACTIVE_STATUSES = [
+        'Pending',
+        'Waiting',
+        'Reassigning',
+        'Accepted',
+        'On The Way',
+    ];
+
 
     public function patient()
     {
@@ -35,10 +46,10 @@ class EmergencyRequest extends Model
     }
 
     public function logs()
-{
-    return $this->hasMany(
-        EmergencyLog::class,
-        'emergency_request_id'
-    );
-}   
+    {
+        return $this->hasMany(
+            EmergencyLog::class,
+            'emergency_request_id'
+        );
+    }
 }

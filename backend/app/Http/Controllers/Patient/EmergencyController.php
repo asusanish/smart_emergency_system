@@ -31,8 +31,8 @@ class EmergencyController extends Controller
         // Prevent duplicate emergency
 
         $existing = EmergencyRequest::where('patient_id', Auth::id())
-            ->where('status', '!=', 'Completed')
-            ->first();
+    ->whereIn('status', EmergencyRequest::ACTIVE_STATUSES)
+    ->first();
 
 
         if ($existing) {
@@ -194,12 +194,11 @@ class EmergencyController extends Controller
 
     public function currentEmergency()
     {
+
+
         $emergency = EmergencyRequest::with(['ambulance.driver'])
             ->where('patient_id', Auth::id())
-            ->whereNotIn('status', [
-                'Completed',
-                'Cancelled'
-            ])
+            ->whereIn('status', EmergencyRequest::ACTIVE_STATUSES)
             ->latest()
             ->first();
 
@@ -209,6 +208,19 @@ class EmergencyController extends Controller
             return response()->json([
                 'message' => 'No active emergency'
             ], 404);
+        }
+
+        $remainingSeconds = null;
+
+        if ($emergency->assigned_at) {
+
+            $elapsed = now()->diffInSeconds($emergency->assigned_at) >= 30
+                - strtotime($emergency->assigned_at);
+
+            $remainingSeconds = max(
+                30 - $elapsed,
+                0
+            );
         }
 
 
@@ -221,7 +233,61 @@ class EmergencyController extends Controller
 
         return response()->json([
             'emergency' => $emergency,
-            'logs' => $logs
+            'logs' => $logs,
+            'remaining_seconds' => $remainingSeconds
+        ]);
+    }
+
+    public function cancelEmergency($id)
+    {
+
+        $emergency = EmergencyRequest::where(
+            'id',
+            $id
+        )
+            ->where(
+                'patient_id',
+                Auth::id()
+            )
+            ->firstOrFail();
+
+
+
+        if (in_array($emergency->status, [
+            'Completed',
+            'Cancelled'
+        ])) {
+            return response()->json([
+                'message' => 'Cannot cancel this emergency'
+            ], 400);
+        }
+
+
+
+        if ($emergency->ambulance) {
+
+            $emergency->ambulance->update([
+                'status' => 'Available'
+            ]);
+        }
+
+
+
+        $emergency->update([
+            'status' => 'Cancelled'
+        ]);
+
+
+
+        EmergencyLog::create([
+            'emergency_request_id' => $emergency->id,
+            'status' => 'Emergency cancelled by patient.'
+        ]);
+
+
+
+        return response()->json([
+            'message' => 'Emergency cancelled successfully'
         ]);
     }
 }

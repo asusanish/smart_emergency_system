@@ -39,4 +39,8 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+    public function ambulance()
+    {
+        return $this->hasOne(Ambulance::class, 'driver_id');
+    }
 }

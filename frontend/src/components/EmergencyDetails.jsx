@@ -18,6 +18,11 @@ export default function EmergencyDetails({ selectedEmergency, updateStatus }) {
   const [timeline, setTimeline] = useState([]);
 
   const loadTimeline = async (id) => {
+
+     if (!id) {
+        console.log("Timeline error: missing emergency id");
+        return;
+    }
     try {
       const response = await api.get(`/emergency/${id}/timeline`, {
         headers: {

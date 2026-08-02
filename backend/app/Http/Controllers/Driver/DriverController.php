@@ -25,8 +25,29 @@ class DriverController extends Controller
 
                 $query->where('driver_id', Auth::id());
             })
-            ->where('status', '!=', 'Completed')
+            ->whereIn('status', EmergencyRequest::ACTIVE_STATUSES)
             ->get();
+
+        $requests->transform(function ($emergency) {
+
+            $remainingSeconds = null;
+
+            if ($emergency->assigned_at) {
+
+                $elapsed = now()->diffInSeconds($emergency->assigned_at) >= 30
+                    - strtotime($emergency->assigned_at);
+
+                $remainingSeconds = max(
+                    30 - $elapsed,
+                    0
+                );
+            }
+
+            $emergency->remaining_seconds = $remainingSeconds;
+
+
+            return $emergency;
+        });
 
         return response()->json([
             'driver' => Auth::id(),
@@ -43,6 +64,12 @@ class DriverController extends Controller
 
 
         $emergency = EmergencyRequest::findOrFail($id);
+        if ($emergency->status == "Cancelled") {
+
+            return response()->json([
+                'message' => 'This emergency has already been cancelled.'
+            ], 400);
+        }
 
 
         /*
@@ -164,10 +191,18 @@ class DriverController extends Controller
             if ($ambulance) {
 
                 $ambulance->update([
-
                     'status' => 'Available'
-
                 ]);
+
+
+                // Check waiting queue
+
+                $queueService = new \App\Services\WaitingQueueService();
+
+
+                $queueService->assignWaitingEmergency(
+                    $ambulance
+                );
             }
         }
 

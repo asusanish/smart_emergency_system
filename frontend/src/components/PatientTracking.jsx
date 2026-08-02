@@ -5,6 +5,7 @@ import Notification from "./Notification";
 import { getRouteETA } from "../utils/routeETA";
 import Button from "./ui/Button";
 import Card from "./ui/Card";
+import Countdown from "./Countdown";
 
 export default function PatientTracking() {
   const [eta, setEta] = useState(null);
@@ -17,6 +18,8 @@ export default function PatientTracking() {
 
   const [logs, setLogs] = useState([]);
 
+  const [remainingSeconds, setRemainingSeconds] = useState(null);
+
   const [lastLog, setLastLog] = useState("");
 
   const bottomRef = useRef(null);
@@ -26,6 +29,24 @@ export default function PatientTracking() {
       behavior: "smooth",
     });
   }, [logs]);
+
+  const cancelEmergency = async () => {
+    try {
+      await api.post(
+        `/patient/emergency/${emergency.id}/cancel`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        },
+      );
+
+      loadEmergency();
+    } catch (error) {
+      console.log(error.response);
+    }
+  };
 
   const calculateDistance = (lat1, lon1, lat2, lon2) => {
     const R = 6371;
@@ -66,8 +87,13 @@ export default function PatientTracking() {
       // setStatusMessage(response.data.message);
       setLogs(response.data.logs);
 
-      console.log(response.data);
-      console.log(response.data.message);
+      const assigned = new Date(response.data.emergency.assigned_at);
+
+      const now = new Date();
+
+      const elapsed = Math.floor((now - assigned) / 1000);
+
+      setRemainingSeconds(response.data.remaining_seconds);
 
       //   console.log("Ambulance:", data.ambulance);
       //   console.log("Patient:", {
@@ -134,7 +160,7 @@ export default function PatientTracking() {
           ✅ No Active Emergency
         </h2>
 
-        <p className="mt-2">Your emergency request has been completed.</p>
+        <p>You currently don't have an active emergency request.</p>
       </div>
     );
   }
@@ -153,7 +179,25 @@ export default function PatientTracking() {
     return "bg-gray-100 text-gray-700";
   };
 
-  const getStatusIcon = (status) => {
+  const getTimelineColor = (status) => {
+    if (status.includes("Emergency Requested")) return "bg-red-500";
+
+    if (status.includes("Searching")) return "bg-yellow-500";
+
+    if (status.includes("Assigned")) return "bg-blue-500";
+
+    if (status.includes("Accepted")) return "bg-green-500";
+
+    if (status.includes("On The Way")) return "bg-purple-500";
+
+    if (status.includes("Completed")) return "bg-green-600";
+
+    if (status.includes("Cancelled")) return "bg-gray-500";
+
+    return "bg-gray-400";
+  };
+
+  const getTimelineIcon  = (status) => {
     if (status.includes("Emergency Requested")) return "🚨";
 
     if (status.includes("Assigned")) return "🚑";
@@ -194,7 +238,11 @@ export default function PatientTracking() {
             {logs.map((log) => (
               <div key={log.id} className="flex items-start gap-4">
                 <div className="flex flex-col items-center">
-                  <div className="w-4 h-4 rounded-full bg-red-600"></div>
+                  <div
+                    className={`w-10 h-10 rounded-full flex items-center justify-center text-white${getTimelineColor(log.status)}`}
+                  >
+                    {getTimelineIcon(log.status)}
+                  </div>
 
                   <div className="w-0.5 flex-1 bg-gray-300"></div>
                 </div>
@@ -227,7 +275,12 @@ export default function PatientTracking() {
         {emergency.status === "Pending" && (
           <div className="bg-yellow-50 border border-yellow-300 rounded-xl p-5 mt-5">
             <h2 className="font-bold text-yellow-700">
-              ⏳ Waiting for driver to accept your request...
+              Waiting for driver confirmation...
+              <Countdown seconds={remainingSeconds} />
+              <p>
+                If driver does not respond, we will automatically find another
+                ambulance.
+              </p>
             </h2>
           </div>
         )}
@@ -261,6 +314,26 @@ export default function PatientTracking() {
             </p>
           </Card>
         )}
+
+        {emergency.status !== "Completed" &&
+          emergency.status !== "Cancelled" && (
+            <Card className="mt-5 border-red-200 bg-red-50">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-bold text-red-700">Cancel Emergency</h3>
+
+                  <p className="text-sm text-gray-600 mt-1">
+                    If local help has already arrived or you no longer need an
+                    ambulance, you can cancel this request.
+                  </p>
+                </div>
+
+                <Button variant="danger" onClick={cancelEmergency}>
+                  Cancel
+                </Button>
+              </div>
+            </Card>
+          )}
 
         {(emergency.status === "Accepted" ||
           emergency.status === "On The Way") &&

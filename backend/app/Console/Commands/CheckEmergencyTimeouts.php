@@ -23,19 +23,46 @@ class CheckEmergencyTimeouts extends Command
         $dispatchService = new DispatchService();
 
         $emergencies = EmergencyRequest::with('ambulance.driver')
-            ->where('status', 'Pending')
+            ->whereIn('status', [
+                'Pending',
+                'Waiting'
+            ])
             ->whereNotNull('assigned_at')
+            ->whereDoesntHave('logs', function ($query) {
+
+                $query->where(
+                    'status',
+                    'like',
+                    '%did not respond%'
+                );
+            })
             ->get();
 
         Log::info('Pending emergencies found: ' . $emergencies->count());
 
+
+
         foreach ($emergencies as $emergency) {
 
-            if (
-                Carbon::parse($emergency->assigned_at)
-                ->diffInSeconds(now()) < 30
-            ) {
-                continue;
+            if ($emergency->status == "Waiting") {
+
+                if (
+                    Carbon::parse($emergency->waiting_started_at)
+                    ->diffInMinutes(now()) >= 5
+                ) {
+
+                    $emergency->update([
+                        'status' => 'Cancelled'
+                    ]);
+
+
+                    EmergencyLog::create([
+                        'emergency_request_id' => $emergency->id,
+                        'status' => 'Emergency cancelled because no ambulance was available.'
+                    ]);
+
+                    continue;
+                }
             }
 
             $currentAmbulance = $emergency->ambulance;

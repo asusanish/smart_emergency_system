@@ -10,6 +10,7 @@ import Button from "../components/ui/Button";
 import EmergencyDetails from "../components/EmergencyDetails";
 import EmergencyList from "../components/EmergencyList";
 import useDriverTracking from "../hooks/useDriverTracking";
+import Countdown from "../components/Countdown";
 
 import {
   MapPin,
@@ -35,8 +36,6 @@ function DriverDashboard() {
     distance: 0,
     time: 0,
   });
-
-    
 
   return (
     <DashboardLayout title="Driver Dashboard">
@@ -68,9 +67,7 @@ function DriverDashboard() {
 
             <div className="lg:col-span-3">
               <Card>
-                <h2 className="text-xl font-bold mb-5">
-                  🗺 Live Emergency Map
-                </h2>
+                <h2 className="text-xl font-bold mb-5">🗺 Live Emergency Map</h2>
 
                 <DriverMap
                   patient={{
@@ -110,6 +107,23 @@ function DriverDashboard() {
 
             <div className="lg:col-span-2">
               <div className="lg:col-span-2">
+                {selectedEmergency &&
+                  selectedEmergency.status === "Pending" && (
+                    <Card className="mb-4">
+                      <h3 className="font-bold text-red-600">
+                        ⏳ Driver Response Time
+                      </h3>
+
+                      <Countdown
+                        seconds={selectedEmergency.remaining_seconds}
+                      />
+
+                      <p className="text-sm text-gray-500 mt-2">
+                        Request will be automatically reassigned if not
+                        accepted.
+                      </p>
+                    </Card>
+                  )}
                 <EmergencyDetails
                   selectedEmergency={selectedEmergency}
                   updateStatus={updateStatus}

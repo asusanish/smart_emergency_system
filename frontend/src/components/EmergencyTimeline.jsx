@@ -3,7 +3,82 @@ import {
   Ambulance,
   Navigation,
   CheckCircle,
+  BellRing,
+  Hospital,
+  XCircle,
+  RefreshCcw,
 } from "lucide-react";
+
+
+const getTimelineIcon = (status = "") => {
+
+  if(status.includes("Requested")){
+    return <BellRing size={20}/>;
+  }
+
+  if(status.includes("Assigned")){
+    return <Ambulance size={20}/>;
+  }
+
+  if(status.includes("Accepted")){
+    return <CheckCircle size={20}/>;
+  }
+
+  if(status.includes("Way") || status.includes("Started")){
+    return <Navigation size={20}/>;
+  }
+
+  if(status.includes("Completed")){
+    return <Hospital size={20}/>;
+  }
+
+  if(status.includes("Cancelled")){
+    return <XCircle size={20}/>;
+  }
+
+  if(status.includes("Reassign")){
+    return <RefreshCcw size={20}/>;
+  }
+
+
+  return <Activity size={20}/>;
+
+};
+
+
+const getTimelineColor = (status="")=>{
+
+  if(status.includes("Requested"))
+    return "bg-yellow-500";
+
+
+  if(status.includes("Assigned"))
+    return "bg-blue-500";
+
+
+  if(status.includes("Accepted"))
+    return "bg-green-500";
+
+
+  if(status.includes("Way") || status.includes("Started"))
+    return "bg-indigo-500";
+
+
+  if(status.includes("Completed"))
+    return "bg-green-700";
+
+
+  if(status.includes("Cancelled"))
+    return "bg-red-500";
+
+
+  if(status.includes("Reassign"))
+    return "bg-orange-500";
+
+
+  return "bg-gray-500";
+
+};
 
 const statusConfig = {
   "Emergency Requested": {
@@ -26,6 +101,7 @@ const statusConfig = {
     color: "bg-green-500",
   },
 };
+
 
 export default function EmergencyTimeline({ timeline }) {
       console.log("Timeline component data:", timeline);
