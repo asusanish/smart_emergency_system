@@ -1,46 +1,44 @@
 <?php
 
-    namespace App\Http\Controllers\Driver;
+namespace App\Http\Controllers\Driver;
 
-    use App\Http\Controllers\Controller;
-    use Illuminate\Http\Request;
-    use App\Models\EmergencyRequest;
-    use Illuminate\Support\Facades\Auth;
-    use App\Models\Ambulance;
-    use App\Models\EmergencyLog;
-    use App\Services\DispatchService;
-    use App\Models\EmergencyRejection;
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use App\Models\EmergencyRequest;
+use Illuminate\Support\Facades\Auth;
+use App\Models\Ambulance;
+use App\Models\EmergencyLog;
+use App\Services\DispatchService;
+use App\Models\EmergencyRejection;
 
-    class DriverController extends Controller
+class DriverController extends Controller
+{
+
+
+    public function emergencies()
     {
-       
 
-        public function emergencies()
-        {
+        $requests = EmergencyRequest::with([
+            'ambulance.driver'
+        ])
+            ->whereHas('ambulance', function ($query) {
 
-            $requests = EmergencyRequest::with([
-        'ambulance.driver'
-    ])
-        ->whereHas('ambulance', function ($query) {
-
-            $query->where('driver_id', Auth::id());
-
-        })
-        ->where('status','!=','Completed')
-        ->get();
+                $query->where('driver_id', Auth::id());
+            })
+            ->where('status', '!=', 'Completed')
+            ->get();
 
         return response()->json([
-            'driver'=>Auth::id(),
-            'emergencies'=>$requests
+            'driver' => Auth::id(),
+            'emergencies' => $requests
         ]);
+    }
 
-        }
 
-
-        public function updateStatus(Request $request, $id)
+    public function updateStatus(Request $request, $id)
     {
         $request->validate([
-            'status'=>'required'
+            'status' => 'required'
         ]);
 
 
@@ -53,69 +51,74 @@
         |--------------------------------------------------------------------------
         */
 
-        if ($request->status == "Rejected")
-{
-    $currentAmbulance = Ambulance::find($emergency->ambulance_id);
+        if ($request->status == "Rejected") {
+            $currentAmbulance = Ambulance::find($emergency->ambulance_id);
 
-    if (!$currentAmbulance) {
-        return response()->json([
-            'message' => 'Current ambulance not found.'
-        ], 404);
-    }
+            if (!$currentAmbulance) {
+                return response()->json([
+                    'message' => 'Current ambulance not found.'
+                ], 404);
+            }
 
-    // Free rejected ambulance
-    $currentAmbulance->update([
-        'status' => 'Available'
-    ]);
+            // Free rejected ambulance
+            $currentAmbulance->update([
+                'status' => 'Available'
+            ]);
 
-    // Save rejection
-    EmergencyRejection::create([
-        'emergency_request_id' => $emergency->id,
-        'ambulance_id' => $currentAmbulance->id,
-    ]);
+            // Save rejection
+            EmergencyRejection::create([
+                'emergency_request_id' => $emergency->id,
+                'ambulance_id' => $currentAmbulance->id,
+            ]);
 
-    // Timeline
-    EmergencyLog::create([
-        'emergency_request_id' => $emergency->id,
-        'status' => 'Driver '.$currentAmbulance->driver->name.' rejected the request.'
-    ]);
+            // Timeline
+            EmergencyLog::create([
+                'emergency_request_id' => $emergency->id,
+                'status' => 'Driver ' . $currentAmbulance->driver->name . ' rejected the request.'
+            ]);
 
-    EmergencyLog::create([
-        'emergency_request_id' => $emergency->id,
-        'status' => 'Searching for another ambulance...'
-    ]);
+            EmergencyLog::create([
+                'emergency_request_id' => $emergency->id,
+                'status' => 'Searching for another ambulance...'
+            ]);
 
-    $dispatchService = new DispatchService();
+            $dispatchService = new DispatchService();
 
-    $nearestAmbulance = $dispatchService->assignNearestAmbulance($emergency);
+            $nearestAmbulance = $dispatchService->assignNearestAmbulance($emergency);
 
-    if (!$nearestAmbulance) {
+            if (!$nearestAmbulance) {
 
-        $emergency->update([
-            'status' => 'No Ambulance Available'
-        ]);
+                $emergency->update([
+                    'status' => 'Waiting'
+                ]);
 
-        EmergencyLog::create([
-            'emergency_request_id' => $emergency->id,
-            'status' => 'No ambulance available.'
-        ]);
+                EmergencyLog::create([
+                    'emergency_request_id' => $emergency->id,
+                    'status' => 'All ambulances are currently busy.'
+                ]);
 
-        return response()->json([
-            'message' => 'No ambulance available.'
-        ], 400);
-    }
+                EmergencyLog::create([
+                    'emergency_request_id' => $emergency->id,
+                    'status' => 'Waiting for the next available ambulance.'
+                ]);
 
-    EmergencyLog::create([
-        'emergency_request_id' => $emergency->id,
-        'status' => 'Assigned to '.$nearestAmbulance->driver->name.
-                    ' ('.$nearestAmbulance->vehicle_number.')'
-    ]);
+                return response()->json([
+                    'message' => 'Emergency moved to waiting queue.',
+                    'emergency' => $emergency
+                ]);
+            }
 
-    return response()->json([
-        'message' => 'Emergency reassigned successfully.',
-        'emergency' => $emergency->fresh(['ambulance.driver'])
-    ]);
-}
+            EmergencyLog::create([
+                'emergency_request_id' => $emergency->id,
+                'status' => 'Assigned to ' . $nearestAmbulance->driver->name .
+                    ' (' . $nearestAmbulance->vehicle_number . ')'
+            ]);
+
+            return response()->json([
+                'message' => 'Emergency reassigned successfully.',
+                'emergency' => $emergency->fresh(['ambulance.driver'])
+            ]);
+        }
 
 
 
@@ -128,7 +131,7 @@
 
         $emergency->update([
 
-            'status'=>$request->status
+            'status' => $request->status
 
         ]);
 
@@ -136,9 +139,9 @@
 
         EmergencyLog::create([
 
-            'emergency_request_id'=>$emergency->id,
+            'emergency_request_id' => $emergency->id,
 
-            'status'=>$request->status
+            'status' => $request->status
 
         ]);
 
@@ -151,39 +154,34 @@
         |--------------------------------------------------------------------------
         */
 
-        if($request->status == "Completed")
-        {
+        if ($request->status == "Completed") {
 
             $ambulance = Ambulance::find(
                 $emergency->ambulance_id
             );
 
 
-            if($ambulance)
-            {
+            if ($ambulance) {
 
                 $ambulance->update([
 
-                    'status'=>'Available'
+                    'status' => 'Available'
 
                 ]);
-
             }
-
         }
 
 
 
         return response()->json([
 
-            'message'=>'Emergency status updated',
+            'message' => 'Emergency status updated',
 
-            'emergency'=>$emergency
+            'emergency' => $emergency
 
         ]);
-
     }
-        public function updateLocation(Request $request)
+    public function updateLocation(Request $request)
     {
         $request->validate([
             'latitude' => 'required|numeric',
@@ -209,5 +207,5 @@
         return response()->json([
             'message' => 'Location updated successfully'
         ]);
-        }
     }
+}

@@ -71,10 +71,7 @@ class DispatchService
         return null;
     }
 
-    \Log::info([
-        'DispatchService Selected' => $nearestAmbulance->vehicle_number,
-        'Distance' => $nearestDistance,
-    ]);
+   
 
     // Reserve ambulance
    DB::transaction(function () use ($nearestAmbulance, $emergency) {

@@ -13,13 +13,12 @@ export default function PatientTracking() {
 
   const [notification, setNotification] = useState("");
 
-  
   // const [statusMessage, setStatusMessage] = useState("");
-  
+
   const [logs, setLogs] = useState([]);
-  
+
   const [lastLog, setLastLog] = useState("");
-  
+
   const bottomRef = useRef(null);
 
   useEffect(() => {
@@ -172,10 +171,6 @@ export default function PatientTracking() {
     return "📍";
   };
 
-  
-
-  
-
   return (
     <>
       <Notification message={notification} />
@@ -248,6 +243,22 @@ export default function PatientTracking() {
             </h2>
 
             <p className="mt-2">Searching for another nearby ambulance...</p>
+          </Card>
+        )}
+
+        {emergency.status === "Waiting" && (
+          <Card className="bg-blue-50 border border-blue-300 p-5 mt-5">
+            <h2 className="font-bold text-blue-700 text-lg">
+              🚑 Waiting for Available Ambulance
+            </h2>
+
+            <p className="mt-2">All nearby ambulances are currently busy.</p>
+
+            <p>Your emergency request is still active.</p>
+
+            <p className="mt-2 font-medium">
+              The system will automatically assign the next available ambulance.
+            </p>
           </Card>
         )}
 

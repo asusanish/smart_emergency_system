@@ -9,6 +9,7 @@ use App\Models\EmergencyLog;
 use App\Models\Ambulance;
 use App\Services\DispatchService;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 
 class CheckEmergencyTimeouts extends Command
 {
@@ -18,6 +19,7 @@ class CheckEmergencyTimeouts extends Command
 
     public function handle()
     {
+        Log::info('Emergency timeout command started');
         $dispatchService = new DispatchService();
 
         $emergencies = EmergencyRequest::with('ambulance.driver')
@@ -25,11 +27,13 @@ class CheckEmergencyTimeouts extends Command
             ->whereNotNull('assigned_at')
             ->get();
 
+        Log::info('Pending emergencies found: ' . $emergencies->count());
+
         foreach ($emergencies as $emergency) {
 
             if (
                 Carbon::parse($emergency->assigned_at)
-                    ->diffInSeconds(now()) < 30
+                ->diffInSeconds(now()) < 30
             ) {
                 continue;
             }
@@ -53,8 +57,10 @@ class CheckEmergencyTimeouts extends Command
 
             EmergencyLog::create([
                 'emergency_request_id' => $emergency->id,
-                'status' => 'Driver '.$currentAmbulance->driver->name.' did not respond within 30 seconds.'
+                'status' => 'Driver ' . $currentAmbulance->driver->name . ' did not respond within 30 seconds.'
             ]);
+
+            Log::info('Reached second timeout log');
 
             EmergencyLog::create([
                 'emergency_request_id' => $emergency->id,
@@ -71,17 +77,24 @@ class CheckEmergencyTimeouts extends Command
 
                 EmergencyLog::create([
                     'emergency_request_id' => $emergency->id,
-                    'status' => 'No ambulance available.'
+                    'status' => 'All ambulances are currently busy.'
                 ]);
+
+                EmergencyLog::create([
+                    'emergency_request_id' => $emergency->id,
+                    'status' => 'Waiting for the next available ambulance.'
+                ]);
+                Log::info('Emergency moved to waiting queue');
 
                 continue;
             }
 
             EmergencyLog::create([
                 'emergency_request_id' => $emergency->id,
-                'status' => 'Assigned to '.$nextAmbulance->driver->name.
-                    ' ('.$nextAmbulance->vehicle_number.')'
+                'status' => 'Assigned to ' . $nextAmbulance->driver->name .
+                    ' (' . $nextAmbulance->vehicle_number . ')'
             ]);
+            Log::info('Emergency reassigned successfully');
         }
 
         return self::SUCCESS;
